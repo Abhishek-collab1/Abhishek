@@ -1,36 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Abhishek's Daily Thought</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Thought</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 2rem auto;
-      line-height: 1.6;
-      padding: 1rem;
-      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #f0f4f8;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    h1 {
-      color: #333;
+    .container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      max-width: 90%;
       text-align: center;
     }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #333;
+    }
     p {
+      font-size: 1.125rem;
       color: #555;
+      line-height: 1.4;
+    }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background: #007BFF;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <h1>Abhishek</h1>
-  <p>
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent vel
-    ligula scelerisque, finibus odio et, fringilla turpis. Donec sed
-    tincidunt nisi. Duis dapibus dolor sit amet ipsum facilisis, eget
-    sollicitudin mi bibendum. Integer feugiat, nisl a facilisis pretium,
-    elit orci convallis arcu, quis luctus sem ante in felis. Sed molestie
-    vulputate lacus id hendrerit.
-  </p>
+  <div class="container">
+    <h1>Today's Thought</h1>
+    <p id="thought">Loading...</p>
+    <button id="newThoughtBtn">New Thought</button>
+  </div>
+
+  <script>
+    // Array of daily thoughts
+    const thoughts = [
+      "The secret of getting ahead is getting started.",
+      "Happiness is not something ready made. It comes from your own actions.",
+      "The only way to do great work is to love what you do.",
+      "Believe you can and you're halfway there.",
+      "You are never too old to set another goal or to dream a new dream.",
+      "Turn your wounds into wisdom.",
+      "Do what you can, with what you have, where you are."
+    ];
+
+    const thoughtEl = document.getElementById('thought');
+    const btn = document.getElementById('newThoughtBtn');
+
+    // Function to get an index based on current date
+    function getDailyIndex() {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), 0, 0);
+      const diff = now - start;
+      const oneDay = 1000 * 60 * 60 * 24;
+      const dayOfYear = Math.floor(diff / oneDay);
+      return dayOfYear % thoughts.length;
+    }
+
+    // Display today's thought
+    function showDailyThought() {
+      const index = getDailyIndex();
+      thoughtEl.textContent = thoughts[index];
+    }
+
+    // Show a random thought on button click
+    function showRandomThought() {
+      const randomIndex = Math.floor(Math.random() * thoughts.length);
+      thoughtEl.textContent = thoughts[randomIndex];
+    }
+
+    // Event listener
+    btn.addEventListener('click', showRandomThought);
+
+    // Initialize
+    showDailyThought();
+  </script>
 </body>
 </html>
+
