@@ -3,274 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Abhishek Choudhary</title>
+    <title>Flappy Bird</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
             margin: 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 0;
+            background-color: #87CEEB;
         }
-
-        .container {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            width: 90%;
-            text-align: center;
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            margin: 0 auto;
+            background-color: #FFFFFF;
+            overflow: hidden;
         }
-
-        .thought-container {
-            margin: 2rem 0;
-            min-height: 150px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        #bird {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #FF5733;
         }
-
-        .thought {
-            font-size: 1.5rem;
-            color: #333;
-            line-height: 1.6;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-
-        .thought.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .author {
-            margin-top: 1rem;
-            font-style: italic;
-            color: #666;
-        }
-
-        .generate-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            transition: transform 0.2s ease, background-color 0.2s ease;
-        }
-
-        .generate-btn:hover {
-            background-color: #45a049;
-            transform: scale(1.05);
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .thought {
-                font-size: 1.2rem;
-            }
+        .pipe {
+            position: absolute;
+            width: 60px;
+            background-color: #00FF00;
+            outline: none; /* Remove outline */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Daily Inspiration By Abhishek</h1>
-        <div class="thought-container">
-            <p class="thought" id="thought-text"></p>
-            <p class="author" id="thought-author"></p>
-        </div>
-        <button class="generate-btn" onclick="generateNewThought()">New Thought</button>
+    <div id="game-container">
+        <div id="bird"></div>
+        <div class="pipe" style="height: 200px; top: 0; left: 200px;"></div>
+        <div class="pipe" style="height: 300px; top: 400px; left: 300px;"></div>
     </div>
-
     <script>
-        const thoughts = [
-            {
-                text: "The only way to do great work is to love what you do.",
-                author: "Steve Jobs"
-            },
-            {
-                text: "In three words I can sum up everything I've learned about life: it goes on.",
-                author: "Robert Frost"
-            },
-            {
-                text: "The future belongs to those who believe in the beauty of their dreams.",
-                author: "Eleanor Roosevelt"
-            },
-            {
-                text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-                author: "Winston Churchill"
-            },
-            {
-                text: "The only true wisdom is in knowing you know nothing.",
-                author: "Socrates"
-            },
-            {
-                text: "Be the change you wish to see in the world.",
-                author: "Mahatma Gandhi"
-            },
-          {
-                text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
-                author: "Winston Churchill"
-           },
-          {
-                text: "The only true wisdom is in knowing you know nothing.",
-                 author: "Socrates"
-          },
-      {
-        text: "Be the change you wish to see in the world.",
-        author: "Mahatma Gandhi"
-    },
-    {
-        text: "In the middle of every difficulty lies opportunity.",
-        author: "Albert Einstein"
-    },
-    {
-        text: "Do not wait for the perfect moment, take the moment and make it perfect.",
-        author: "Unknown"
-    },
-    {
-        text: "The best way to predict the future is to create it.",
-        author: "Peter Drucker"
-    },
-    {
-        text: "You miss 100% of the shots you don’t take.",
-        author: "Wayne Gretzky"
-    },
-    {
-        text: "Dream big and dare to fail.",
-        author: "Norman Vaughan"
-    },
-    {
-        text: "Believe you can and you're halfway there.",
-        author: "Theodore Roosevelt"
-    },
-    {
-        text: "Act as if what you do makes a difference. It does.",
-        author: "William James"
-    },
-    {
-        text: "Don’t watch the clock; do what it does. Keep going.",
-        author: "Sam Levenson"
-    },
-    {
-        text: "It always seems impossible until it’s done.",
-        author: "Nelson Mandela"
-    },
-    {
-        text: "The harder you work for something, the greater you'll feel when you achieve it.",
-        author: "Unknown"
-    },
-    {
-        text: "Push yourself, because no one else is going to do it for you.",
-        author: "Unknown"
-    },
-    {
-        text: "Great things never come from comfort zones.",
-        author: "Unknown"
-    },
-    {
-        text: "Success doesn’t just find you. You have to go out and get it.",
-        author: "Unknown"
-    },
-    {
-        text: "The future depends on what you do today.",
-        author: "Mahatma Gandhi"
-    },
-    {
-        text: "You are never too old to set another goal or to dream a new dream.",
-        author: "C.S. Lewis"
-    },
-    {
-        text: "Start where you are. Use what you have. Do what you can.",
-        author: "Arthur Ashe"
-    },
-    {
-        text: "Don’t limit your challenges. Challenge your limits.",
-        author: "Unknown"
-    },
-    {
-        text: "Doubt kills more dreams than failure ever will.",
-        author: "Suzy Kassem"
-    },
-    {
-        text: "Your limitation—it’s only your imagination.",
-        author: "Unknown"
-    },
-    {
-        text: "Sometimes later becomes never. Do it now.",
-        author: "Unknown"
-    },
-    {
-        text: "Little things make big days.",
-        author: "Isabel Marant"
-    },
-    {
-        text: "Work hard in silence, let your success be your noise.",
-        author: "Frank Ocean"
-    },
-    {
-        text: "Don’t stop when you’re tired. Stop when you’re done.",
-        author: "Marilyn Monroe"
-    },
-    {
-        text: "Wake up with determination. Go to bed with satisfaction.",
-        author: "Unknown"
-    }
-        ];
+        const bird = document.getElementById("bird");
+        let birdTop = 250;
+        let birdLeft = 50;
+        let gravity = 2;
+        let gameSpeed = 2;
+        let isGameOver = false;
 
-        let currentThoughtIndex = null;
-        const thoughtElement = document.getElementById('thought-text');
-        const authorElement = document.getElementById('thought-author');
+        function jump() {
+            if (!isGameOver) {
+                birdTop -= 50;
+            }
+        }
 
-        // Check if we have a daily thought already set today
-        function getDailyThought() {
-            const lastDate = localStorage.getItem('lastDate');
-            const currentDate = new Date().toDateString();
+        document.addEventListener("keydown", jump);
 
-            if (lastDate === currentDate) {
-                const savedIndex = localStorage.getItem('thoughtIndex');
-                currentThoughtIndex = savedIndex ? parseInt(savedIndex) : null;
-            } else {
-                // Generate new daily thought
-                currentThoughtIndex = Math.floor(Math.random() * thoughts.length);
-                localStorage.setItem('lastDate', currentDate);
-                localStorage.setItem('thoughtIndex', currentThoughtIndex);
+        function gameLoop() {
+            if (!isGameOver) {
+                birdTop += gravity;
+                bird.style.top = birdTop + "px";
             }
 
-            displayThought(currentThoughtIndex);
+            if (birdTop <= 0 || birdTop >= 560) {
+                gameOver();
+            }
+
+            const pipes = document.querySelectorAll(".pipe");
+            pipes.forEach(pipe => {
+                const pipeLeft = parseInt(pipe.style.left);
+                if (pipeLeft > -60) {
+                    pipe.style.left = pipeLeft - gameSpeed + "px";
+
+                    // Check for collision
+                    if (
+                        birdLeft + 40 > pipeLeft &&
+                        birdLeft < pipeLeft + 60 &&
+                        birdTop + 40 > parseInt(pipe.style.top) &&
+                        birdTop < parseInt(pipe.style.top) + parseInt(pipe.style.height)
+                    ) {
+                        gameOver();
+                    }
+                } else {
+                    pipe.style.left = "400px";
+                }
+            });
+
+            if (!isGameOver) {
+                requestAnimationFrame(gameLoop);
+            }
         }
 
-        function displayThought(index) {
-            if (index === null || index >= thoughts.length) return;
-            
-            thoughtElement.classList.remove('show');
-            authorElement.classList.remove('show');
-
-            setTimeout(() => {
-                thoughtElement.textContent = thoughts[index].text;
-                authorElement.textContent = `— ${thoughts[index].author}`;
-                
-                thoughtElement.classList.add('show');
-                authorElement.classList.add('show');
-            }, 500);
+        function gameOver() {
+            isGameOver = true;
+            alert("Game Over! Click OK to restart.");
+            birdTop = 250;
+            isGameOver = false;
+            const pipes = document.querySelectorAll(".pipe");
+            pipes.forEach(pipe => {
+                pipe.style.left = "400px";
+            });
         }
 
-        function generateNewThought() {
-            const newIndex = Math.floor(Math.random() * thoughts.length);
-            currentThoughtIndex = newIndex;
-            displayThought(newIndex);
-        }
-
-        // Initialize on page load
-        window.onload = getDailyThought;
+        gameLoop();
     </script>
 </body>
 </html>
