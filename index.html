@@ -1,415 +1,1132 @@
+// server.js
+const express = require('express');
+const session = require('express-session');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = 3000;
+
+// In-memory user store (username -> password). 
+// For demonstration; in production use a database and hashed passwords.
+let users = {};
+
+// Middleware setup
+app.use(express.urlencoded({ extended: true })); // parse POST form data
+app.use(session({
+  secret: 'supersecretkey', // secret for signing session ID cookie
+  resave: false,
+  saveUninitialized: false
+}));
+app.use(express.static(path.join(__dirname, 'public'))); // serve static files (css, js, images)
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+
+// Middleware to protect routes
+function requireLogin(req, res, next) {
+  if (req.session.username) {
+    next();
+  } else {
+    res.redirect('/login');
+  }
+}
+
+// Home page route
+app.get('/', (req, res) => {
+  if (req.session.username) {
+    res.redirect('/index');
+  } else {
+    res.redirect('/login');
+  }
+});
+
+// Main index page showing games
+app.get('/index', requireLogin, (req, res) => {
+  const gameList = [
+    { name: 'Snake', slug: 'snake', thumb: '/images/snake.png' },
+    { name: 'Flappy Bird', slug: 'flappy', thumb: '/images/flappy.png' },
+    { name: 'Breakout', slug: 'breakout', thumb: '/images/breakout.png' },
+    { name: 'Space Shooter', slug: 'space', thumb: '/images/space.png' },
+    { name: 'Pong', slug: 'pong', thumb: '/images/pong.png' },
+    { name: 'Memory Match', slug: 'memory', thumb: '/images/memory.png' },
+    { name: 'Simon Says', slug: 'simon', thumb: '/images/simon.png' },
+    { name: 'Tic-Tac-Toe', slug: 'tictactoe', thumb: '/images/tictactoe.png' },
+    { name: 'Whack-A-Mole', slug: 'whackamole', thumb: '/images/whackamole.png' },
+    { name: 'Sliding Puzzle', slug: 'sliding', thumb: '/images/sliding.png' }
+  ];
+  res.render('index', { user: req.session.username, games: gameList });
+});
+
+// Login page (GET)
+app.get('/login', (req, res) => {
+  if (req.session.username) {
+    res.redirect('/index');
+  } else {
+    res.render('login', { error: null });
+  }
+});
+
+// Login handler (POST)
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  if (users[username] && users[username] === password) {
+    req.session.username = username;
+    res.redirect('/index');
+  } else {
+    res.render('login', { error: 'Invalid username or password.' });
+  }
+});
+
+// Registration page (GET)
+app.get('/register', (req, res) => {
+  if (req.session.username) {
+    res.redirect('/index');
+  } else {
+    res.render('register', { error: null });
+  }
+});
+
+// Register handler (POST)
+app.post('/register', (req, res) => {
+  const { username, password } = req.body;
+  if (users[username]) {
+    res.render('register', { error: 'Username already taken.' });
+  } else {
+    users[username] = password;
+    req.session.username = username;
+    res.redirect('/index');
+  }
+});
+
+// Logout
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/login');
+  });
+});
+
+// Game page (dynamic route)
+app.get('/game/:gameName', requireLogin, (req, res) => {
+  const game = req.params.gameName;
+  const allowedGames = ['snake','flappy','breakout','space','pong','memory','simon','tictactoe','whackamole','sliding'];
+  if (!allowedGames.includes(game)) {
+    res.status(404).send('Game not found.');
+  } else {
+    res.render('game', { user: req.session.username, game: game });
+  }
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server started on http://localhost:${PORT}`);
+});
+<!-- views/layout.ejs -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Zone</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: white;
-        }
-
-        header {
-            background-color: #333;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-
-        .game-card {
-            background-color: #333;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.3s;
-        }
-
-        .game-card:hover {
-            transform: scale(1.05);
-        }
-
-        .game-container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-
-        /* Tic Tac Toe Board */
-        .tic-tac-toe {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5px;
-            background-color: #444;
-            padding: 5px;
-        }
-
-        .cell {
-            background-color: #666;
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            cursor: pointer;
-        }
-
-        /* Memory Game */
-        .memory-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
-        }
-
-        .memory-card {
-            aspect-ratio: 1;
-            background-color: #444;
-            cursor: pointer;
-            transition: transform 0.6s;
-            transform-style: preserve-3d;
-        }
-
-        .memory-card.flipped {
-            background-color: #666;
-            transform: rotateY(180deg);
-        }
-
-        /* Snake Game */
-        #snakeCanvas {
-            border: 2px solid #444;
-            background-color: #000;
-        }
-
-        /* Reflex Test */
-        #reflexBox {
-            width: 300px;
-            height: 200px;
-            background-color: #444;
-            margin: 20px auto;
-            cursor: pointer;
-        }
-
-        /* Clicker Game */
-        .clicker-game {
-            text-align: center;
-        }
-
-        #clickButton {
-            padding: 20px;
-            font-size: 24px;
-            margin: 20px;
-            cursor: pointer;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <header>
-        <h1>Game Zone</h1>
-        <p>Play your favorite games!</p>
-    </header>
+  <header>
+    <h1>Fun Games Portal</h1>
+    <% if (user) { %>
+      <nav>
+        Welcome, <strong><%= user %></strong> | 
+        <a href="/index">Home</a> | 
+        <a href="/logout">Logout</a>
+      </nav>
+    <% } %>
+  </header>
 
-    <div class="game-grid">
-        <div class="game-card" onclick="location.href='#tic-tac-toe'">
-            <h2>Tic Tac Toe</h2>
-            <p>Classic X vs O game</p>
-        </div>
+  <main>
+    <%= body %>
+  </main>
 
-        <div class="game-card" onclick="location.href='#memory'">
-            <h2>Memory Game</h2>
-            <p>Find matching pairs</p>
-        </div>
-
-        <div class="game-card" onclick="location.href='#snake'">
-            <h2>Snake</h2>
-            <p>Classic snake game</p>
-        </div>
-
-        <div class="game-card" onclick="location.href='#reflex'">
-            <h2>Reflex Test</h2>
-            <p>Test your reaction time</p>
-        </div>
-
-        <div class="game-card" onclick="location.href='#clicker'">
-            <h2>Clicker Game</h2>
-            <p>Click to earn points</p>
-        </div>
-    </div>
-
-    <!-- Tic Tac Toe Game -->
-    <div id="tic-tac-toe" class="game-container">
-        <h2>Tic Tac Toe</h2>
-        <div class="tic-tac-toe" id="board"></div>
-        <p id="status">Player X's turn</p>
-        <button onclick="resetTicTacToe()">Reset Game</button>
-    </div>function checkWinner() {
-    const winPatterns = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-        [0, 4, 8], [2, 4, 6] // Diagonals
-    ];
-
-    return winPatterns.some(pattern => 
-        pattern.every(index => board[index] === currentPlayer)
-    );
-}
-
-// Update handleCellClick
-if (board[index] === '' && !gameEnded) {
-    board[index] = currentPlayer;
-    e.target.textContent = currentPlayer;
-    
-    if (checkWinner()) {
-        statusElement.textContent = `Player ${currentPlayer} wins!`;
-        gameEnded = true;
-    } else if (board.every(cell => cell !== '')) {
-        statusElement.textContent = "It's a draw!";
-        gameEnded = true;
-    } else {
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        statusElement.textContent = `Player ${currentPlayer}'s turn`;
-    }
-}
-
-    <!-- Memory Game -->
-    <div id="memory" class="game-container">
-        <h2>Memory Game</h2>
-        <div class="memory-grid" id="memoryGrid"></div>
-        <p>Score: <span id="score">0</span></p>
-    </div>
-
-    <!-- Snake Game -->
-    <div id="snake" class="game-container">
-        <h2>Snake Game</h2>
-        <canvas id="snakeCanvas" width="400" height="400"></canvas>
-        <p>Score: <span id="snakeScore">0</span></p>
-    </div>
-
-    <!-- Reflex Test -->
-    <div id="reflex" class="game-container">
-        <h2>Reflex Test</h2>
-        <div id="reflexBox"></div>
-        <p>Your reaction time: <span id="reactionTime">0</span>ms</p>
-    </div>
-
-    <!-- Clicker Game -->
-    <div id="clicker" class="game-container clicker-game">
-        <h2>Clicker Game</h2>
-        <p>Points: <span id="points">0</span></p>
-        <button id="clickButton">Click Me!</button>
-        <p>Autoclickers: <span id="autoclickers">0</span> (Cost: <span id="autoclickerCost">10</span>)</p>
-        <button onclick="buyAutoclicker()">Buy Autoclicker</button>
-    </div>
-
-    <script>
-        // Tic Tac Toe
-        let currentPlayer = 'X';
-        let board = ['', '', '', '', '', '', '', '', ''];
-        const statusElement = document.getElementById('status');
-
-        function initializeTicTacToe() {
-            const boardElement = document.getElementById('board');
-            boardElement.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell';
-                cell.setAttribute('data-index', i);
-                cell.addEventListener('click', handleCellClick);
-                boardElement.appendChild(cell);
-            }
-        }
-
-        function handleCellClick(e) {
-            const index = e.target.getAttribute('data-index');
-            if (board[index] === '' && !checkWinner()) {
-                board[index] = currentPlayer;
-                e.target.textContent = currentPlayer;
-                if (checkWinner()) {
-                    statusElement.textContent = `Player ${currentPlayer} wins!`;
-                } else if (board.every(cell => cell !== '')) {
-                    statusElement.textContent = "It's a draw!";
-                } else {
-                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-                    statusElement.textContent = `Player ${currentPlayer}'s turn`;
-                }
-            }
-        }
-
-        function checkWinner() {
-            const winPatterns = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
-                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
-                [0, 4, 8], [2, 4, 6] // Diagonals
-            ];
-
-            return winPatterns.some(pattern => 
-                pattern.every(index => board[index] === currentPlayer)
-            );
-        }
-
-        function resetTicTacToe() {
-            board = ['', '', '', '', '', '', '', '', ''];
-            currentPlayer = 'X';
-            statusElement.textContent = "Player X's turn";
-            document.querySelectorAll('.cell').forEach(cell => {
-                cell.textContent = '';
-            });
-        }
-
-        // Memory Game
-        const memoryCards = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D'];
-        let flippedCards = [];
-        let score = 0;
-
-        function initializeMemoryGame() {
-            const grid = document.getElementById('memoryGrid');
-            grid.innerHTML = '';
-            memoryCards.sort(() => Math.random() - 0.5);
-            memoryCards.forEach((card, index) => {
-                const cardElement = document.createElement('div');
-                cardElement.className = 'memory-card';
-                cardElement.textContent = card;
-                cardElement.addEventListener('click', () => flipCard(cardElement, card));
-                grid.appendChild(cardElement);
-            });
-        }
-
-        function flipCard(cardElement, value) {
-            if (!cardElement.classList.contains('flipped') && flippedCards.length < 2) {
-                cardElement.classList.add('flipped');
-                flippedCards.push({ element: cardElement, value });
-                
-                if (flippedCards.length === 2) {
-                    if (flippedCards[0].value === flippedCards[1].value) {
-                        score += 10;
-                        document.getElementById('score').textContent = score;
-                        flippedCards = [];
-                    } else {
-                        setTimeout(() => {
-                            flippedCards.forEach(card => card.element.classList.remove('flipped'));
-                            flippedCards = [];
-                        }, 1000);
-                    }
-                }
-            }
-        }
-
-        // Snake Game
-        const canvas = document.getElementById('snakeCanvas');
-        const ctx = canvas.getContext('2d');
-        let snake = [{ x: 10, y: 10 }];
-        let food = { x: 15, y: 15 };
-        let dx = 1, dy = 0;
-        let score = 0;
-
-        function gameLoop() {
-            // Move snake
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            snake.unshift(head);
-            
-            // Check collision with food
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                document.getElementById('snakeScore').textContent = score;
-                generateFood();
-            } else {
-                snake.pop();
-            }
-
-            // Draw game
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.fillStyle = 'lime';
-            snake.forEach(segment => {
-                ctx.fillRect(segment.x * 20, segment.y * 20, 18, 18);
-            });
-
-            ctx.fillStyle = 'red';
-            ctx.fillRect(food.x * 20, food.y * 20, 18, 18);
-        }
-
-        function generateFood() {
-            food = {
-                x: Math.floor(Math.random() * 20),
-                y: Math.floor(Math.random() * 20)
-            };
-        }
-
-        document.addEventListener('keydown', e => {
-            switch(e.key) {
-                case 'ArrowUp': if (dy !== 1) { dx = 0; dy = -1; } break;
-                case 'ArrowDown': if (dy !== -1) { dx = 0; dy = 1; } break;
-                case 'ArrowLeft': if (dx !== 1) { dx = -1; dy = 0; } break;
-                case 'ArrowRight': if (dx !== -1) { dx = 1; dy = 0; } break;
-            }
-        });
-
-        // Reflex Test
-        const reflexBox = document.getElementById('reflexBox');
-        let startTime;
-        let timeoutId;
-
-        reflexBox.addEventListener('click', () => {
-            if (reflexBox.style.backgroundColor === 'green') {
-                const reactionTime = Date.now() - startTime;
-                document.getElementById('reactionTime').textContent = reactionTime;
-                reflexBox.style.backgroundColor = '#444';
-                setTimeout(startReflexTest, Math.random() * 3000 + 1000);
-            }
-        });
-
-        function startReflexTest() {
-            timeoutId = setTimeout(() => {
-                reflexBox.style.backgroundColor = 'green';
-                startTime = Date.now();
-            }, Math.random() * 3000 + 1000);
-        }
-
-        // Clicker Game
-        let points = 0;
-        let autoclickers = 0;
-        let autoclickerCost = 10;
-
-        document.getElementById('clickButton').addEventListener('click', () => {
-            points++;
-            document.getElementById('points').textContent = points;
-        });
-
-        function buyAutoclicker() {
-            if (points >= autoclickerCost) {
-                points -= autoclickerCost;
-                autoclickers++;
-                autoclickerCost = Math.floor(autoclickerCost * 1.5);
-                document.getElementById('autoclickers').textContent = autoclickers;
-                document.getElementById('autoclickerCost').textContent = autoclickerCost;
-                document.getElementById('points').textContent = points;
-            }
-        }
-
-        setInterval(() => {
-            points += autoclickers;
-            document.getElementById('points').textContent = points;
-        }, 1000);
-
-        // Initialize games
-        initializeTicTacToe();
-        initializeMemoryGame();
-        setInterval(gameLoop, 100);
-        startReflexTest();
-    </script>
+  <footer>
+    <p>&copy; 2025 Fun Games Portal</p>
+  </footer>
+  <script src="/js/app.js"></script>
 </body>
 </html>
+<!-- views/login.ejs -->
+<% layout('layout', { title: 'Login', user: null }) %>
+<section class="auth-form">
+  <h2>Login</h2>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <form action="/login" method="POST">
+    <label>Username:<br><input type="text" name="username" required></label><br>
+    <label>Password:<br><input type="password" name="password" required></label><br>
+    <button type="submit">Login</button>
+  </form>
+  <p>Don't have an account? <a href="/register">Register here</a>.</p>
+</section>
+<!-- views/register.ejs -->
+<% layout('layout', { title: 'Register', user: null }) %>
+<section class="auth-form">
+  <h2>Register</h2>
+  <% if (error) { %><p class="error"><%= error %></p><% } %>
+  <form action="/register" method="POST">
+    <label>Username:<br><input type="text" name="username" required></label><br>
+    <label>Password:<br><input type="password" name="password" required></label><br>
+    <button type="submit">Register</button>
+  </form>
+  <p>Already have an account? <a href="/login">Login here</a>.</p>
+</section>
+<!-- views/index.ejs -->
+<% layout('layout', { title: 'Home', user: user }) %>
+<section class="game-list">
+  <h2>Available Games</h2>
+  <div class="games-container">
+    <% games.forEach(function(game) { %>
+      <a class="game-card" href="/game/<%= game.slug %>">
+        <!-- Thumbnail image (you can use placeholder images if needed) -->
+        <img src="<%= game.thumb %>" alt="<%= game.name %> thumbnail" class="game-thumb">
+        <div class="game-title"><%= game.name %></div>
+      </a>
+    <% }); %>
+  </div>
+</section>
+<!-- views/game.ejs -->
+<% layout('layout', { title: game.charAt(0).toUpperCase() + game.slice(1), user: user }) %>
+<section class="game-page">
+  <h2><%= game.charAt(0).toUpperCase() + game.slice(1) %></h2>
+  <div class="game-container">
+    <% if (game === 'snake') { %>
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+      <script src="/js/games/snake.js"></script>
+    <% } else if (game === 'flappy') { %>
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+      <script src="/js/games/flappy.js"></script>
+    <% } else if (game === 'breakout') { %>
+      <canvas id="gameCanvas" width="400" height="300"></canvas>
+      <script src="/js/games/breakout.js"></script>
+    <% } else if (game === 'space') { %>
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+      <script src="/js/games/space.js"></script>
+    <% } else if (game === 'pong') { %>
+      <canvas id="gameCanvas" width="400" height="400"></canvas>
+      <script src="/js/games/pong.js"></script>
+    <% } else if (game === 'memory') { %>
+      <div id="memoryGame"></div>
+      <script src="/js/games/memory.js"></script>
+    <% } else if (game === 'simon') { %>
+      <div id="simonGame"></div>
+      <script src="/js/games/simon.js"></script>
+    <% } else if (game === 'tictactoe') { %>
+      <div id="ticTacToe"></div>
+      <script src="/js/games/tictactoe.js"></script>
+    <% } else if (game === 'whackamole') { %>
+      <div id="whackMole"></div>
+      <script src="/js/games/whackamole.js"></script>
+    <% } else if (game === 'sliding') { %>
+      <div id="slidingPuzzle"></div>
+      <script src="/js/games/sliding.js"></script>
+    <% } %>
+  </div>
+</section>
+/* public/css/style.css */
+
+/* Reset some basics */
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Header */
+header {
+  background: #333;
+  color: #fff;
+  padding: 10px;
+  text-align: center;
+}
+header nav {
+  margin-top: 5px;
+}
+header nav a {
+  color: #fff;
+  margin: 0 10px;
+  text-decoration: none;
+}
+
+/* Footer */
+footer {
+  background: #f2f2f2;
+  color: #333;
+  text-align: center;
+  padding: 10px;
+  margin-top: 20px;
+}
+
+/* Game list (home page) */
+.game-list h2 {
+  text-align: center;
+  margin-top: 20px;
+}
+.games-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 20px;
+}
+.game-card {
+  width: 180px;
+  margin: 10px;
+  text-align: center;
+  text-decoration: none;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.game-card:hover {
+  transform: scale(1.05);
+}
+.game-thumb {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  background: #eee;
+}
+.game-title {
+  padding: 10px;
+  font-weight: bold;
+}
+
+/* Auth form (login/register) */
+.auth-form {
+  width: 300px;
+  margin: 50px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+.auth-form h2 {
+  text-align: center;
+}
+.auth-form label {
+  display: block;
+  margin: 10px 0;
+}
+.auth-form input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+}
+.auth-form button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+.error {
+  color: red;
+  text-align: center;
+}
+
+/* Game page */
+.game-page {
+  text-align: center;
+}
+.game-container {
+  margin: 20px auto;
+  position: relative;
+}
+
+/* Responsive layout: stack game cards on small screens */
+@media (max-width: 600px) {
+  .games-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  .game-card {
+    width: 80%;
+  }
+}
+// public/js/games/snake.js
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const grid = 20;
+let snake = [{x: 9 * grid, y: 9 * grid}];
+let dx = grid, dy = 0; // initial direction: moving right
+let food = randomPosition();
+let gameInterval;
+
+// Generate a random position on the grid
+function randomPosition() {
+  return {
+    x: Math.floor(Math.random() * 20) * grid,
+    y: Math.floor(Math.random() * 20) * grid
+  };
+}
+
+// Game loop: moves snake, checks collisions, draws everything
+function gameLoop() {
+  // Move snake by adding new head
+  const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+  snake.unshift(head);
+
+  // Check wall collisions
+  if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+    clearInterval(gameInterval);
+    alert('Game Over');
+    return;
+  }
+  // Check self collisions
+  for (let i = 1; i < snake.length; i++) {
+    if (head.x === snake[i].x && head.y === snake[i].y) {
+      clearInterval(gameInterval);
+      alert('Game Over');
+      return;
+    }
+  }
+  // Check food collision
+  if (head.x === food.x && head.y === food.y) {
+    food = randomPosition(); // eat food: generate new food
+  } else {
+    snake.pop(); // remove tail if no food eaten
+  }
+
+  // Draw background
+  ctx.fillStyle = '#fafafa';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#ccc';
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+  // Draw snake
+  ctx.fillStyle = 'green';
+  snake.forEach(part => ctx.fillRect(part.x, part.y, grid-1, grid-1));
+
+  // Draw food
+  ctx.fillStyle = 'red';
+  ctx.fillRect(food.x, food.y, grid-1, grid-1);
+}
+
+// Handle arrow key presses to change direction
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -grid; }
+  if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = grid; }
+  if (e.key === 'ArrowLeft' && dx === 0) { dx = -grid; dy = 0; }
+  if (e.key === 'ArrowRight' && dx === 0) { dx = grid; dy = 0; }
+});
+
+// Start the game loop
+gameInterval = setInterval(gameLoop, 100);
+// public/js/games/flappy.js
+const canvas2 = document.getElementById('gameCanvas');
+const ctx2 = canvas2.getContext('2d');
+let birdY = 200;
+let birdVelocity = 0;
+const gravity = 0.6;
+const jumpStrength = -10;
+let pipes = [];
+let frameCount = 0;
+let gameOver = false;
+
+// Create new pipe column (with a gap)
+function createPipe() {
+  const gap = 100;
+  const topHeight = Math.random() * (canvas2.height - gap - 50);
+  pipes.push({ x: canvas2.width, top: topHeight, bottom: topHeight + gap });
+}
+
+// Game loop
+function flappyLoop() {
+  frameCount++;
+  // Add new pipe occasionally
+  if (frameCount % 90 === 0) { createPipe(); }
+  // Move pipes
+  pipes.forEach(pipe => pipe.x -= 2);
+  // Remove off-screen pipes
+  if (pipes.length && pipes[0].x < -50) { pipes.shift(); }
+
+  // Bird physics
+  birdVelocity += gravity;
+  birdY += birdVelocity;
+  if (birdY > canvas2.height || birdY < 0) {
+    alert('Game Over');
+    document.location.reload();
+    return;
+  }
+  // Check for collisions with pipes
+  pipes.forEach(pipe => {
+    if (50 > pipe.x && 50 < pipe.x + 50) {
+      if (birdY < pipe.top || birdY + 20 > pipe.bottom) {
+        alert('Game Over');
+        document.location.reload();
+      }
+    }
+  });
+
+  // Draw background
+  ctx2.fillStyle = '#87CEEB';
+  ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+  // Draw bird
+  ctx2.fillStyle = 'yellow';
+  ctx2.fillRect(50, birdY, 20, 20);
+  // Draw pipes
+  ctx2.fillStyle = 'green';
+  pipes.forEach(pipe => {
+    ctx2.fillRect(pipe.x, 0, 50, pipe.top);
+    ctx2.fillRect(pipe.x, pipe.bottom, 50, canvas2.height - pipe.bottom);
+  });
+}
+
+// Jump on mouse click or spacebar
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { birdVelocity = jumpStrength; }
+});
+canvas2.addEventListener('click', () => { birdVelocity = jumpStrength; });
+
+// Start game
+setInterval(flappyLoop, 20);
+// public/js/games/breakout.js
+const canvas3 = document.getElementById('gameCanvas');
+const ctx3 = canvas3.getContext('2d');
+let paddleX = (canvas3.width - 100) / 2;
+const paddleY = canvas3.height - 20;
+const paddleWidth = 100;
+const ballRadius = 8;
+let ballX = canvas3.width/2, ballY = canvas3.height/2;
+let ballDX = 2, ballDY = -2;
+let bricks = [];
+const brickRowCount = 3, brickColCount = 5;
+const brickWidth = 60, brickHeight = 20, brickPadding = 10;
+let rightPressed = false, leftPressed = false;
+
+// Create brick grid
+for (let c = 0; c < brickColCount; c++) {
+  bricks[c] = [];
+  for (let r = 0; r < brickRowCount; r++) {
+    bricks[c][r] = { x: 0, y: 0, status: 1 };
+  }
+}
+
+// Key handlers
+document.addEventListener("keydown", e => {
+  if (e.key === "Right" || e.key === "ArrowRight") { rightPressed = true; }
+  else if (e.key === "Left" || e.key === "ArrowLeft") { leftPressed = true; }
+});
+document.addEventListener("keyup", e => {
+  if (e.key === "Right" || e.key === "ArrowRight") { rightPressed = false; }
+  else if (e.key === "Left" || e.key === "ArrowLeft") { leftPressed = false; }
+});
+
+// Draw bricks
+function drawBricks() {
+  for (let c = 0; c < brickColCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      if (bricks[c][r].status === 1) {
+        const brickX = c * (brickWidth + brickPadding) + 30;
+        const brickY = r * (brickHeight + brickPadding) + 30;
+        bricks[c][r].x = brickX;
+        bricks[c][r].y = brickY;
+        ctx3.fillStyle = 'teal';
+        ctx3.fillRect(brickX, brickY, brickWidth, brickHeight);
+      }
+    }
+  }
+}
+
+// Collision detection ball-brick
+function collisionDetection() {
+  for (let c = 0; c < brickColCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      const b = bricks[c][r];
+      if (b.status === 1) {
+        if (
+          ballX > b.x && ballX < b.x + brickWidth &&
+          ballY > b.y && ballY < b.y + brickHeight
+        ) {
+          ballDY = -ballDY;
+          b.status = 0;
+        }
+      }
+    }
+  }
+}
+
+// Draw ball
+function drawBall() {
+  ctx3.beginPath();
+  ctx3.arc(ballX, ballY, ballRadius, 0, Math.PI*2);
+  ctx3.fillStyle = 'purple';
+  ctx3.fill();
+  ctx3.closePath();
+}
+
+// Draw paddle
+function drawPaddle() {
+  ctx3.fillStyle = 'black';
+  ctx3.fillRect(paddleX, paddleY, paddleWidth, 10);
+}
+
+// Main draw loop
+function breakoutLoop() {
+  ctx3.clearRect(0, 0, canvas3.width, canvas3.height);
+  drawBricks();
+  drawBall();
+  drawPaddle();
+  collisionDetection();
+
+  // Bounce off walls
+  if (ballX + ballDX < ballRadius || ballX + ballDX > canvas3.width - ballRadius) {
+    ballDX = -ballDX;
+  }
+  if (ballY + ballDY < ballRadius) {
+    ballDY = -ballDY;
+  } else if (ballY + ballDY > canvas3.height - ballRadius) {
+    // Check paddle hit
+    if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+      ballDY = -ballDY;
+    } else {
+      alert("Game Over");
+      document.location.reload();
+    }
+  }
+  ballX += ballDX;
+  ballY += ballDY;
+
+  // Move paddle
+  if (rightPressed && paddleX < canvas3.width - paddleWidth) {
+    paddleX += 5;
+  } else if (leftPressed && paddleX > 0) {
+    paddleX -= 5;
+  }
+}
+
+// Start game
+setInterval(breakoutLoop, 10);
+// public/js/games/space.js
+const canvas4 = document.getElementById('gameCanvas');
+const ctx4 = canvas4.getContext('2d');
+const ship = { x: canvas4.width/2 - 15, y: canvas4.height - 30, width: 30, height: 30 };
+let bullets = [];
+let enemies = [];
+let left4 = false, right4 = false, shoot4 = false;
+
+// Handle controls
+document.addEventListener("keydown", e => {
+  if (e.key === 'ArrowLeft') left4 = true;
+  if (e.key === 'ArrowRight') right4 = true;
+  if (e.key === ' ') shoot4 = true;
+});
+document.addEventListener("keyup", e => {
+  if (e.key === 'ArrowLeft') left4 = false;
+  if (e.key === 'ArrowRight') right4 = false;
+  if (e.key === ' ') shoot4 = false;
+});
+
+// Create enemy at random x
+function spawnEnemy() {
+  const x = Math.random() * (canvas4.width - 30);
+  enemies.push({ x: x, y: 0, size: 30 });
+}
+
+// Main loop
+function spaceLoop() {
+  // Spawn enemies occasionally
+  if (Math.random() < 0.01) { spawnEnemy(); }
+
+  // Move ship
+  if (left4 && ship.x > 0) ship.x -= 4;
+  if (right4 && ship.x < canvas4.width - ship.width) ship.x += 4;
+  // Shoot bullet
+  if (shoot4 && bullets.length < 5) {
+    bullets.push({ x: ship.x + ship.width/2 - 2, y: ship.y });
+    shoot4 = false; // prevent continuous spawn
+  }
+  // Move bullets
+  bullets.forEach(b => b.y -= 5);
+  bullets = bullets.filter(b => b.y > 0);
+
+  // Move enemies
+  enemies.forEach(en => en.y += 2);
+  enemies = enemies.filter(en => en.y < canvas4.height);
+
+  // Collision: bullets vs enemies
+  bullets.forEach((b, bi) => {
+    enemies.forEach((en, ei) => {
+      if (b.x > en.x && b.x < en.x + en.size && b.y > en.y && b.y < en.y + en.size) {
+        // remove both
+        bullets.splice(bi, 1);
+        enemies.splice(ei, 1);
+      }
+    });
+  });
+
+  // Collision: enemies vs ship (game over)
+  enemies.forEach(en => {
+    if (en.x < ship.x + ship.width && en.x + en.size > ship.x &&
+        en.y < ship.y + ship.height && en.y + en.size > ship.y) {
+      alert('Game Over');
+      document.location.reload();
+    }
+  });
+
+  // Draw background
+  ctx4.fillStyle = 'black';
+  ctx4.fillRect(0, 0, canvas4.width, canvas4.height);
+  // Draw ship
+  ctx4.fillStyle = 'cyan';
+  ctx4.fillRect(ship.x, ship.y, ship.width, ship.height);
+  // Draw bullets
+  ctx4.fillStyle = 'yellow';
+  bullets.forEach(b => ctx4.fillRect(b.x, b.y, 4, 10));
+  // Draw enemies
+  ctx4.fillStyle = 'red';
+  enemies.forEach(en => ctx4.fillRect(en.x, en.y, en.size, en.size));
+}
+
+// Start game loop
+setInterval(spaceLoop, 20);
+// public/js/games/pong.js
+const canvas5 = document.getElementById('gameCanvas');
+const ctx5 = canvas5.getContext('2d');
+const paddleWidth = 80, paddleHeight = 10;
+let paddleX = (canvas5.width - paddleWidth) / 2;
+let paddleAI = (canvas5.width - paddleWidth) / 2;
+let right5 = false, left5 = false;
+let ball = {
+  x: canvas5.width/2,
+  y: canvas5.height/2,
+  dx: 3,
+  dy: 3,
+  radius: 6
+};
+
+// Controls for bottom paddle
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') right5 = true;
+  if (e.key === 'ArrowLeft') left5 = true;
+});
+document.addEventListener('keyup', e => {
+  if (e.key === 'ArrowRight') right5 = false;
+  if (e.key === 'ArrowLeft') left5 = false;
+});
+
+// Main game loop
+function pongLoop() {
+  // Move bottom paddle
+  if (right5 && paddleX < canvas5.width - paddleWidth) paddleX += 5;
+  if (left5 && paddleX > 0) paddleX -= 5;
+  // Move AI paddle (simple: follow the ball x)
+  if (ball.x > paddleAI + paddleWidth/2) {
+    paddleAI += 3;
+  } else {
+    paddleAI -= 3;
+  }
+  paddleAI = Math.max(Math.min(paddleAI, canvas5.width - paddleWidth), 0);
+
+  // Move ball
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // Bounce off walls
+  if (ball.x < ball.radius || ball.x > canvas5.width - ball.radius) {
+    ball.dx = -ball.dx;
+  }
+  // Bounce off paddles
+  if (ball.y > canvas5.height - paddleHeight - ball.radius) {
+    if (ball.x > paddleX && ball.x < paddleX + paddleWidth) {
+      ball.dy = -ball.dy;
+    }
+  }
+  if (ball.y < paddleHeight + ball.radius) {
+    if (ball.x > paddleAI && ball.x < paddleAI + paddleWidth) {
+      ball.dy = -ball.dy;
+    }
+  }
+  // Check for game over
+  if (ball.y > canvas5.height || ball.y < 0) {
+    alert('Game Over');
+    document.location.reload();
+  }
+
+  // Draw everything
+  ctx5.clearRect(0, 0, canvas5.width, canvas5.height);
+  // Paddles
+  ctx5.fillStyle = 'blue';
+  ctx5.fillRect(paddleX, canvas5.height - paddleHeight, paddleWidth, paddleHeight);
+  ctx5.fillRect(paddleAI, 0, paddleWidth, paddleHeight);
+  // Ball
+  ctx5.beginPath();
+  ctx5.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
+  ctx5.fillStyle = 'red';
+  ctx5.fill();
+}
+
+// Start Pong
+setInterval(pongLoop, 16);
+// public/js/games/memory.js
+const memoryContainer = document.getElementById('memoryGame');
+const symbols = ['🍎','🍌','🍇','🍒'];
+let cards = symbols.concat(symbols); // duplicate symbols for pairs
+// Shuffle cards
+cards.sort(() => 0.5 - Math.random());
+
+let first = null, second = null;
+let lock = false;
+
+// Create card elements
+cards.forEach((sym, index) => {
+  const card = document.createElement('div');
+  card.className = 'memory-card';
+  card.dataset.symbol = sym;
+  card.innerHTML = '<div class="face down"></div><div class="face up">' + sym + '</div>';
+  memoryContainer.appendChild(card);
+  card.addEventListener('click', () => {
+    if (lock || card === first || card.classList.contains('matched')) return;
+    card.classList.add('flipped');
+    if (!first) {
+      first = card;
+    } else {
+      second = card;
+      lock = true;
+      // Check match after short delay
+      setTimeout(() => {
+        if (first.dataset.symbol === second.dataset.symbol) {
+          first.classList.add('matched');
+          second.classList.add('matched');
+        } else {
+          first.classList.remove('flipped');
+          second.classList.remove('flipped');
+        }
+        first = null;
+        second = null;
+        lock = false;
+        // Check win
+        if (document.querySelectorAll('.matched').length === cards.length) {
+          alert('You matched all cards!');
+        }
+      }, 600);
+    }
+  });
+});
+/* Memory game card styles */
+#memoryGame {
+  display: flex;
+  flex-wrap: wrap;
+  width: 240px;
+  margin: 20px auto;
+}
+.memory-card {
+  width: 60px; height: 80px;
+  margin: 5px;
+  position: relative;
+  cursor: pointer;
+}
+.memory-card .face {
+  position: absolute;
+  width: 100%; height: 100%;
+  backface-visibility: hidden;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 32px;
+  border-radius: 4px;
+}
+.memory-card .down {
+  background: #444;
+  color: #444;
+}
+.memory-card .up {
+  background: #fff;
+  transform: rotateY(180deg);
+}
+.memory-card.flipped .down {
+  transform: rotateY(180deg);
+}
+.memory-card.flipped .up {
+  transform: rotateY(0deg);
+}
+.memory-card.matched {
+  cursor: default;
+}
+/* Memory game card styles */
+#memoryGame {
+  display: flex;
+  flex-wrap: wrap;
+  width: 240px;
+  margin: 20px auto;
+}
+.memory-card {
+  width: 60px; height: 80px;
+  margin: 5px;
+  position: relative;
+  cursor: pointer;
+}
+.memory-card .face {
+  position: absolute;
+  width: 100%; height: 100%;
+  backface-visibility: hidden;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 32px;
+  border-radius: 4px;
+}
+.memory-card .down {
+  background: #444;
+  color: #444;
+}
+.memory-card .up {
+  background: #fff;
+  transform: rotateY(180deg);
+}
+.memory-card.flipped .down {
+  transform: rotateY(180deg);
+}
+.memory-card.flipped .up {
+  transform: rotateY(0deg);
+}
+.memory-card.matched {
+  cursor: default;
+}
+// public/js/games/simon.js
+const simonContainer = document.getElementById('simonGame');
+const colors = ['green', 'red', 'yellow', 'blue'];
+let sequence = [];
+let playerSeq = [];
+let level = 0;
+
+// Create Simon buttons
+colors.forEach(col => {
+  const btn = document.createElement('div');
+  btn.className = 'simon-button ' + col;
+  simonContainer.appendChild(btn);
+  btn.addEventListener('click', () => {
+    playerSeq.push(col);
+    flashButton(btn);
+    checkSequence();
+  });
+});
+
+// Flash a button (for Simon's turn or on click)
+function flashButton(btn) {
+  btn.classList.add('active');
+  setTimeout(() => btn.classList.remove('active'), 300);
+}
+
+// Simon adds a random color to sequence and plays it
+function nextRound() {
+  level++;
+  playerSeq = [];
+  const randomColor = colors[Math.floor(Math.random() * 4)];
+  sequence.push(randomColor);
+  // Flash sequence with delays
+  sequence.forEach((col, i) => {
+    setTimeout(() => {
+      const btn = document.querySelector('.' + col);
+      flashButton(btn);
+    }, (i + 1) * 700);
+  });
+}
+
+// Check player's input against sequence
+function checkSequence() {
+  const idx = playerSeq.length - 1;
+  if (playerSeq[idx] !== sequence[idx]) {
+    alert('Wrong! Game Over.');
+    sequence = [];
+    level = 0;
+    return;
+  }
+  if (playerSeq.length === sequence.length) {
+    setTimeout(nextRound, 1000);
+  }
+}
+
+// Start the first round
+nextRound();
+/* Simon game buttons */
+#simonGame {
+  display: flex;
+  flex-wrap: wrap;
+  width: 200px;
+  margin: 20px auto;
+}
+.simon-button {
+  width: 90px; height: 90px;
+  margin: 5px;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.simon-button.green { background: #0f0; }
+.simon-button.red   { background: #f00; }
+.simon-button.yellow{ background: #ff0; }
+.simon-button.blue  { background: #00f; }
+.simon-button.active {
+  opacity: 1;
+}
+// public/js/games/tictactoe.js
+const tttContainer = document.getElementById('ticTacToe');
+let currentPlayer = 'X';
+let board = Array(9).fill(null);
+
+// Create 3x3 grid
+for (let i = 0; i < 9; i++) {
+  const cell = document.createElement('div');
+  cell.className = 'tic-cell';
+  cell.dataset.index = i;
+  tttContainer.appendChild(cell);
+  cell.addEventListener('click', () => {
+    if (!cell.textContent && !checkWin()) {
+      cell.textContent = currentPlayer;
+      board[i] = currentPlayer;
+      if (checkWin()) {
+        setTimeout(() => alert(currentPlayer + ' wins!'), 10);
+      } else if (board.every(cell => cell)) {
+        setTimeout(() => alert('Draw!'), 10);
+      }
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    }
+  });
+}
+
+// Check all winning combinations
+function checkWin() {
+  const wins = [
+    [0,1,2],[3,4,5],[6,7,8], // rows
+    [0,3,6],[1,4,7],[2,5,8], // cols
+    [0,4,8],[2,4,6]          // diagonals
+  ];
+  return wins.some(combo => {
+    const [a,b,c] = combo;
+    return board[a] && board[a] === board[b] && board[a] === board[c];
+  });
+}
+/* Tic-Tac-Toe board */
+#ticTacToe {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  grid-gap: 5px;
+  width: max-content;
+  margin: 20px auto;
+}
+.tic-cell {
+  width: 60px; height: 60px;
+  background: #fff;
+  border: 2px solid #000;
+  font-size: 36px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+// public/js/games/whackamole.js
+const whackContainer = document.getElementById('whackMole');
+const holes = 6;
+let score = 0;
+let active = null;
+const scoreDisplay = document.createElement('div');
+scoreDisplay.textContent = 'Score: 0';
+whackContainer.appendChild(scoreDisplay);
+
+// Create holes (buttons)
+for (let i = 0; i < holes; i++) {
+  const hole = document.createElement('button');
+  hole.className = 'mole-hole';
+  whackContainer.appendChild(hole);
+  hole.addEventListener('click', () => {
+    if (i === active) {
+      score++;
+      scoreDisplay.textContent = 'Score: ' + score;
+      hole.classList.remove('mole');
+      active = null;
+    }
+  });
+}
+
+// Show moles periodically
+function peep() {
+  if (active !== null) {
+    document.querySelectorAll('.mole-hole')[active].classList.remove('mole');
+    active = null;
+  }
+  const idx = Math.floor(Math.random() * holes);
+  active = idx;
+  const hole = document.querySelectorAll('.mole-hole')[idx];
+  hole.classList.add('mole');
+  setTimeout(peep, 800);
+}
+peep();
+/* Whack-a-Mole */
+#whackMole {
+  width: 250px;
+  margin: 20px auto;
+  text-align: center;
+}
+.mole-hole {
+  width: 60px; height: 60px;
+  margin: 5px;
+  border-radius: 50%;
+  background: #866;
+  display: inline-block;
+  position: relative;
+  cursor: pointer;
+}
+.mole-hole.mole {
+  background: #964B00;
+}
+// public/js/games/sliding.js
+const slideContainer = document.getElementById('slidingPuzzle');
+let boardNums = [1,2,3,4,5,6,7,8,null];
+// Shuffle (for simplicity, a few swaps)
+for (let i = 0; i < 50; i++) {
+  const idx = boardNums.indexOf(null);
+  const neighbors = [];
+  if (idx % 3 !== 0) neighbors.push(idx - 1);
+  if (idx % 3 !== 2) neighbors.push(idx + 1);
+  if (idx > 2) neighbors.push(idx - 3);
+  if (idx < 6) neighbors.push(idx + 3);
+  const swapWith = neighbors[Math.floor(Math.random() * neighbors.length)];
+  [boardNums[idx], boardNums[swapWith]] = [boardNums[swapWith], boardNums[idx]];
+}
+
+// Render grid
+function renderBoard() {
+  slideContainer.innerHTML = '';
+  boardNums.forEach((num, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'slide-cell';
+    if (num !== null) cell.textContent = num;
+    slideContainer.appendChild(cell);
+    cell.addEventListener('click', () => {
+      const blankIdx = boardNums.indexOf(null);
+      const row = Math.floor(i/3), col = i % 3;
+      const brow = Math.floor(blankIdx/3), bcol = blankIdx % 3;
+      // Check if clicked tile is adjacent to blank
+      if ((row === brow && Math.abs(col - bcol) === 1) ||
+          (col === bcol && Math.abs(row - brow) === 1)) {
+        [boardNums[i], boardNums[blankIdx]] = [boardNums[blankIdx], boardNums[i]];
+        renderBoard();
+        // Check win
+        if (boardNums.slice(0,8).every((v, idx) => v === idx+1)) {
+          setTimeout(() => alert('Puzzle solved!'), 100);
+        }
+      }
+    });
+  });
+}
+
+renderBoard();
+/* Sliding puzzle */
+#slidingPuzzle {
+  display: grid;
+  grid-template-columns: repeat(3, 80px);
+  grid-gap: 5px;
+  width: max-content;
+  margin: 20px auto;
+}
+.slide-cell {
+  width: 80px; height: 80px;
+  background: #88c;
+  border: 2px solid #fff;
+  font-size: 36px;
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.slide-cell:empty {
+  background: #ccc;
+  cursor: default;
+}
+
