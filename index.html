@@ -1,354 +1,388 @@
-
-           
-        let birdLeft = 50;
-        let gravity = 2;
-        let gameSpeed = 2;
-        let isGameOver = false;
-
-        function jump() {
-            if (!isGameOver) {
-                birdTop -= 50;
-            }
-        }
-
-        document.addEventListener("keydown", jump);
-
-        function gameLoop() {
-            if (!isGameOver) {
-                birdTop += gravity;
-                bird.style.top = birdTop + "px";
-            }
-
-            if (birdTop <= 0 || birdTop >= 560) {
-                gameOver();
-            }
-
-            const pipes = document.querySelectorAll(".pipe");
-            pipes.forEach(pipe => {
-                const pipeLeft = parseInt(pipe.style.left);
-                if (pipeLeft > -60) {
-                    pipe.style.left = pipeLeft - gameSpeed + "px";
-
-                    // Check for collision
-                    if (
-                        birdLeft + 40 > pipeLeft &&
-                        birdLeft < pipeLeft + 60 &&
-                        birdTop + 40 > parseInt(pipe.style.top) &&
-                        birdTop < parseInt(pipe.style.top) + parseInt(pipe.style.height)
-                    ) {
-                        gameOver();
-                    }
-                } else {
-                    pipe.style.left = "400px";
-                }
-            });
-
-            if (!isGameOver) {
-                requestAnimationFrame(gameLoop);
-            }
-        }
-
-        function gameOver() {
-            isGameOver = true;
-            alert("Game Over! Click OK to restart.");
-            birdTop = 250;
-            isGameOver = false;
-            const pipes = document.querySelectorAll(".pipe");
-            pipes.forEach(pipe => {
-                pipe.style.left = "400px";
-            });
-        }
-
-        gameLoop();
-    </script>
-</body>
-</html>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Game Zone</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+        }
+
+        header {
+            background-color: #333;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .game-card {
+            background-color: #333;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .game-card:hover {
+            transform: scale(1.05);
+        }
+
+        .game-container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        /* Tic Tac Toe Board */
+        .tic-tac-toe {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            background-color: #444;
+            padding: 5px;
+        }
+
+        .cell {
+            background-color: #666;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            cursor: pointer;
+        }
+
+        /* Memory Game */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+
+        .memory-card {
+            aspect-ratio: 1;
+            background-color: #444;
+            cursor: pointer;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .memory-card.flipped {
+            background-color: #666;
+            transform: rotateY(180deg);
+        }
+
+        /* Snake Game */
+        #snakeCanvas {
+            border: 2px solid #444;
+            background-color: #000;
+        }
+
+        /* Reflex Test */
+        #reflexBox {
+            width: 300px;
+            height: 200px;
+            background-color: #444;
+            margin: 20px auto;
+            cursor: pointer;
+        }
+
+        /* Clicker Game */
+        .clicker-game {
+            text-align: center;
+        }
+
+        #clickButton {
+            padding: 20px;
+            font-size: 24px;
+            margin: 20px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Tic Tac Toe</h1>
-        <div class="board">
-            <div class="cell" id="1"></div>
-            <div class="cell" id="2"></div>
-            <div class="cell" id="3"></div>
-            <div class="cell" id="4"></div>
-            <div class="cell" id="5"></div>
-            <div class="cell" id="6"></div>
-            <div class="cell" id="7"></div>
-            <div class="cell" id="8"></div>
-            <div class="cell" id="9"></div>
+    <header>
+        <h1>Game Zone</h1>
+        <p>Play your favorite games!</p>
+    </header>
+
+    <div class="game-grid">
+        <div class="game-card" onclick="location.href='#tic-tac-toe'">
+            <h2>Tic Tac Toe</h2>
+            <p>Classic X vs O game</p>
         </div>
-        <button onclick="reset()">Reset</button>
+
+        <div class="game-card" onclick="location.href='#memory'">
+            <h2>Memory Game</h2>
+            <p>Find matching pairs</p>
+        </div>
+
+        <div class="game-card" onclick="location.href='#snake'">
+            <h2>Snake</h2>
+            <p>Classic snake game</p>
+        </div>
+
+        <div class="game-card" onclick="location.href='#reflex'">
+            <h2>Reflex Test</h2>
+            <p>Test your reaction time</p>
+        </div>
+
+        <div class="game-card" onclick="location.href='#clicker'">
+            <h2>Clicker Game</h2>
+            <p>Click to earn points</p>
+        </div>
     </div>
 
-    <script src="script.js"></script>
-</body>
-</html>
-<html lang="en">
-<head>
-	<meta charset="UTF-8">
-	<title>Simple JavaScript Snake Game| Webdevtrick.com</title>
-	
-	<style>
-	canvas {
-		display: block;
-		position: absolute;
-		border: 5px solid  #009BFF;
-		margin: auto;
-		top: 0;
-		bottom: 0;
-		right: 0;
-		left: 0;
-	}
-	</style>
-</head>
-<body>
-<script>
-var
-COLS = 26,
-ROWS = 26,
-EMPTY = 0,
-SNAKE = 1,
-FRUIT = 2,
-LEFT  = 0,
-UP    = 1,
-RIGHT = 2,
-DOWN  = 3,
-KEY_LEFT  = 37,
-KEY_UP    = 38,
-KEY_RIGHT = 39,
-KEY_DOWN  = 40,
-canvas,	  
-ctx,	  
-keystate, 
-frames,   
-score;	  
- 
-grid = {
- 
-	width: null,  
-	height: null, 
-	_grid: null,  
- 
-	
-	init: function(d, c, r) {
-		this.width = c;
-		this.height = r;
- 
-		this._grid = [];
-		for (var x=0; x < c; x++) {
-		this._grid.push([]);
-		for (var y=0; y < r; y++) {
-		this._grid[x].push(d);
-		}
-		}
-	},
- 
-	
-	set: function(val, x, y) {
-		this._grid[x][y] = val;
-	},
- 
-	
-	get: function(x, y) {
-		return this._grid[x][y];
-	}
-}
- 
- 
-snake = {
- 
-	direction: null, 
-	last: null,	 
-	_queue: null,	
- 
-	
-	init: function(d, x, y) {
-		this.direction = d;
- 
-		this._queue = [];
-		this.insert(x, y);
-	},
- 
-	
-	insert: function(x, y) {
-		
-		this._queue.unshift({x:x, y:y});
-		this.last = this._queue[0];
-	},
- 
-	
-	remove: function() {
-		
-		return this._queue.pop();
-	}
-};
- 
- 
-function setFood() {
-	var empty = [];
-	
-	for (var x=0; x < grid.width; x++) {
-		for (var y=0; y < grid.height; y++) {
-		if (grid.get(x, y) === EMPTY) {
-		empty.push({x:x, y:y});
-		}
-		}
-	}
-	
-	var randpos = empty[Math.round(Math.random()*(empty.length - 1))];
-	grid.set(FRUIT, randpos.x, randpos.y);
-}
- 
- 
-function main() {
-	
-	canvas = document.createElement("canvas");
-	canvas.width = COLS*20;
-	canvas.height = ROWS*20;
-	ctx = canvas.getContext("2d");
-	
-	document.body.appendChild(canvas);
- 
-	
-	ctx.font = "12px Helvetica";
- 
-	frames = 0;
-	keystate = {};
-	
-	document.addEventListener("keydown", function(evt) {
-		keystate[evt.keyCode] = true;
-	});
-	document.addEventListener("keyup", function(evt) {
-		delete keystate[evt.keyCode];
-	});
- 
-	
-	init();
-	loop();
-}
- 
- 
-function init() {
-	score = 0;
- 
-	grid.init(EMPTY, COLS, ROWS);
- 
-	var sp = {x:Math.floor(COLS/2), y:ROWS-1};
-	snake.init(UP, sp.x, sp.y);
-	grid.set(SNAKE, sp.x, sp.y);
- 
-	setFood();
-}
- 
- 
-function loop() {
-	update();
-	draw();
-	
-	window.requestAnimationFrame(loop, canvas);
-}
- 
- 
-function update() {
-	frames++;
- 
-	
-	if (keystate[KEY_LEFT] && snake.direction !== RIGHT) {
-	snake.direction = LEFT;
-	}
-	if (keystate[KEY_UP] && snake.direction !== DOWN) {
-	snake.direction = UP;
-	}
-	if (keystate[KEY_RIGHT] && snake.direction !== LEFT) {
-	snake.direction = RIGHT;
-	}
-	if (keystate[KEY_DOWN] && snake.direction !== UP) {
-	snake.direction = DOWN;
-	}
- 
-	
-	if (frames%7 === 0) {
-		
-	var nx = snake.last.x;
-	var ny = snake.last.y;
- 
-		
-	switch (snake.direction) {
-	case LEFT:
-	nx--;
-	break;
-	case UP:
-	ny--;
-	break;
-	case RIGHT:
-	nx++;
-	break;
-	case DOWN:
-	ny++;
-	break;
-	}
- 
-		
-	if (0 > nx || nx > grid.width-1  ||
-	0 > ny || ny > grid.height-1 ||
-	grid.get(nx, ny) === SNAKE
-	) {
-	return init();
-	}
- 
-	if (grid.get(nx, ny) === FRUIT) {
-		
-	score++;
-	setFood();
-	} else {
-		
-	var tail = snake.remove();
-	grid.set(EMPTY, tail.x, tail.y);
-	}
- 
-	grid.set(SNAKE, nx, ny);
-	snake.insert(nx, ny);
-	}
-}
- 
- 
-function draw() {
-	
-	var tw = canvas.width/grid.width;
-	var th = canvas.height/grid.height;
-	
-	for (var x=0; x < grid.width; x++) {
-	for (var y=0; y < grid.height; y++) {
-		
-	switch (grid.get(x, y)) {
-	case EMPTY:
-	ctx.fillStyle = "#fff";
-	break;
-	case SNAKE:
-	ctx.fillStyle = "#333";
-	break;
-	case FRUIT:
-	ctx.fillStyle = "#009BFF";
-	break;
-	}
-	ctx.fillRect(x*tw, y*th, tw, th);
-	}
-	}
-	
-	ctx.fillStyle = "#000";
-	ctx.fillText("SCORE: " + score, 10, canvas.height-10);
-}
- 
- 
-main();
-</script>
+    <!-- Tic Tac Toe Game -->
+    <div id="tic-tac-toe" class="game-container">
+        <h2>Tic Tac Toe</h2>
+        <div class="tic-tac-toe" id="board"></div>
+        <p id="status">Player X's turn</p>
+        <button onclick="resetTicTacToe()">Reset Game</button>
+    </div>
+
+    <!-- Memory Game -->
+    <div id="memory" class="game-container">
+        <h2>Memory Game</h2>
+        <div class="memory-grid" id="memoryGrid"></div>
+        <p>Score: <span id="score">0</span></p>
+    </div>
+
+    <!-- Snake Game -->
+    <div id="snake" class="game-container">
+        <h2>Snake Game</h2>
+        <canvas id="snakeCanvas" width="400" height="400"></canvas>
+        <p>Score: <span id="snakeScore">0</span></p>
+    </div>
+
+    <!-- Reflex Test -->
+    <div id="reflex" class="game-container">
+        <h2>Reflex Test</h2>
+        <div id="reflexBox"></div>
+        <p>Your reaction time: <span id="reactionTime">0</span>ms</p>
+    </div>
+
+    <!-- Clicker Game -->
+    <div id="clicker" class="game-container clicker-game">
+        <h2>Clicker Game</h2>
+        <p>Points: <span id="points">0</span></p>
+        <button id="clickButton">Click Me!</button>
+        <p>Autoclickers: <span id="autoclickers">0</span> (Cost: <span id="autoclickerCost">10</span>)</p>
+        <button onclick="buyAutoclicker()">Buy Autoclicker</button>
+    </div>
+
+    <script>
+        // Tic Tac Toe
+        let currentPlayer = 'X';
+        let board = ['', '', '', '', '', '', '', '', ''];
+        const statusElement = document.getElementById('status');
+
+        function initializeTicTacToe() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.setAttribute('data-index', i);
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(e) {
+            const index = e.target.getAttribute('data-index');
+            if (board[index] === '' && !checkWinner()) {
+                board[index] = currentPlayer;
+                e.target.textContent = currentPlayer;
+                if (checkWinner()) {
+                    statusElement.textContent = `Player ${currentPlayer} wins!`;
+                } else if (board.every(cell => cell !== '')) {
+                    statusElement.textContent = "It's a draw!";
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    statusElement.textContent = `Player ${currentPlayer}'s turn`;
+                }
+            }
+        }
+
+        function checkWinner() {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+                [0, 4, 8], [2, 4, 6] // Diagonals
+            ];
+
+            return winPatterns.some(pattern => 
+                pattern.every(index => board[index] === currentPlayer)
+            );
+        }
+
+        function resetTicTacToe() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            statusElement.textContent = "Player X's turn";
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+            });
+        }
+
+        // Memory Game
+        const memoryCards = ['A', 'A', 'B', 'B', 'C', 'C', 'D', 'D'];
+        let flippedCards = [];
+        let score = 0;
+
+        function initializeMemoryGame() {
+            const grid = document.getElementById('memoryGrid');
+            grid.innerHTML = '';
+            memoryCards.sort(() => Math.random() - 0.5);
+            memoryCards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'memory-card';
+                cardElement.textContent = card;
+                cardElement.addEventListener('click', () => flipCard(cardElement, card));
+                grid.appendChild(cardElement);
+            });
+        }
+
+        function flipCard(cardElement, value) {
+            if (!cardElement.classList.contains('flipped') && flippedCards.length < 2) {
+                cardElement.classList.add('flipped');
+                flippedCards.push({ element: cardElement, value });
+                
+                if (flippedCards.length === 2) {
+                    if (flippedCards[0].value === flippedCards[1].value) {
+                        score += 10;
+                        document.getElementById('score').textContent = score;
+                        flippedCards = [];
+                    } else {
+                        setTimeout(() => {
+                            flippedCards.forEach(card => card.element.classList.remove('flipped'));
+                            flippedCards = [];
+                        }, 1000);
+                    }
+                }
+            }
+        }
+
+        // Snake Game
+        const canvas = document.getElementById('snakeCanvas');
+        const ctx = canvas.getContext('2d');
+        let snake = [{ x: 10, y: 10 }];
+        let food = { x: 15, y: 15 };
+        let dx = 1, dy = 0;
+        let score = 0;
+
+        function gameLoop() {
+            // Move snake
+            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+            snake.unshift(head);
+            
+            // Check collision with food
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                document.getElementById('snakeScore').textContent = score;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+
+            // Draw game
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = 'lime';
+            snake.forEach(segment => {
+                ctx.fillRect(segment.x * 20, segment.y * 20, 18, 18);
+            });
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x * 20, food.y * 20, 18, 18);
+        }
+
+        function generateFood() {
+            food = {
+                x: Math.floor(Math.random() * 20),
+                y: Math.floor(Math.random() * 20)
+            };
+        }
+
+        document.addEventListener('keydown', e => {
+            switch(e.key) {
+                case 'ArrowUp': if (dy !== 1) { dx = 0; dy = -1; } break;
+                case 'ArrowDown': if (dy !== -1) { dx = 0; dy = 1; } break;
+                case 'ArrowLeft': if (dx !== 1) { dx = -1; dy = 0; } break;
+                case 'ArrowRight': if (dx !== -1) { dx = 1; dy = 0; } break;
+            }
+        });
+
+        // Reflex Test
+        const reflexBox = document.getElementById('reflexBox');
+        let startTime;
+        let timeoutId;
+
+        reflexBox.addEventListener('click', () => {
+            if (reflexBox.style.backgroundColor === 'green') {
+                const reactionTime = Date.now() - startTime;
+                document.getElementById('reactionTime').textContent = reactionTime;
+                reflexBox.style.backgroundColor = '#444';
+                setTimeout(startReflexTest, Math.random() * 3000 + 1000);
+            }
+        });
+
+        function startReflexTest() {
+            timeoutId = setTimeout(() => {
+                reflexBox.style.backgroundColor = 'green';
+                startTime = Date.now();
+            }, Math.random() * 3000 + 1000);
+        }
+
+        // Clicker Game
+        let points = 0;
+        let autoclickers = 0;
+        let autoclickerCost = 10;
+
+        document.getElementById('clickButton').addEventListener('click', () => {
+            points++;
+            document.getElementById('points').textContent = points;
+        });
+
+        function buyAutoclicker() {
+            if (points >= autoclickerCost) {
+                points -= autoclickerCost;
+                autoclickers++;
+                autoclickerCost = Math.floor(autoclickerCost * 1.5);
+                document.getElementById('autoclickers').textContent = autoclickers;
+                document.getElementById('autoclickerCost').textContent = autoclickerCost;
+                document.getElementById('points').textContent = points;
+            }
+        }
+
+        setInterval(() => {
+            points += autoclickers;
+            document.getElementById('points').textContent = points;
+        }, 1000);
+
+        // Initialize games
+        initializeTicTacToe();
+        initializeMemoryGame();
+        setInterval(gameLoop, 100);
+        startReflexTest();
+    </script>
 </body>
 </html>
